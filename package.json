@@ -1,0 +1,42 @@
+{
+  "name": "linear-agent-bridge",
+  "version": "0.1.0",
+  "description": "CLI bridge: approved Linear issue → Cursor cloud agent → PR + project memory",
+  "type": "module",
+  "bin": {
+    "lab": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "lab": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "linear",
+    "cursor",
+    "agent",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@cursor/sdk": "^1.0.0",
+    "@linear/sdk": "^39.0.0",
+    "better-sqlite3": "^11.9.0",
+    "commander": "^13.1.0",
+    "dotenv": "^16.4.7",
+    "js-yaml": "^4.1.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

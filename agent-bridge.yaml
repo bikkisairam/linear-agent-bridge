@@ -1,0 +1,35 @@
+project:
+  name: "Hello Agent Demo"
+  repo: "https://github.com/<your-user>/hello-agent-demo"
+  defaultBranch: main
+  # Optional local checkout of the target repo (for injecting project-brain excerpts)
+  # localPath: "../hello-agent-demo"
+  memoryDir: memory
+
+linear:
+  triggerLabel: "agent-approved"
+
+cursor:
+  runtime: cloud
+  model: composer-2.5
+  autoCreatePR: true
+
+skills:
+  - path: skills/small-fix.md
+
+prompt:
+  bootstrap: |
+    You are fixing a small approved Linear issue in this repo.
+    Read the issue carefully. Make a minimal change.
+    Open a PR. Do not merge. Do not commit secrets.
+    Prefer small, reviewable diffs.
+
+    Before coding, read the project brain if present:
+    - memory/INDEX.md
+    - memory/issues/<ISSUE_ID>.md (if it exists)
+    - any relevant memory/patterns/*.md
+
+    After finishing (success or clear failure), update the project brain in this same PR when possible:
+    - Update or create memory/issues/<ISSUE_ID>.md (goal, what changed, errors, open loops, PR link)
+    - Append a short note under memory/sessions/
+    - Keep INDEX.md current with one-line pointers
