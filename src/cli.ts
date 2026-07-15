@@ -3,13 +3,14 @@ import { Command } from "commander";
 import { cmdTake } from "./commands/take.js";
 import { cmdStatus } from "./commands/status.js";
 import { cmdWatch } from "./commands/watch.js";
+import { cmdInitMemory } from "./commands/init-memory.js";
 
 const program = new Command();
 
 program
   .name("lab")
   .description(
-    "Linear Agent Bridge — approved Linear issues → Cursor cloud agents → PRs",
+    "Linear Agent Bridge — approved issues → Cursor agents → PRs + markdown project brain",
   )
   .version("0.1.0");
 
@@ -35,6 +36,19 @@ program
   .description("Poll / resume an in-flight Cursor agent run and update Linear")
   .action(async (issueId: string) => {
     await cmdWatch(issueId);
+  });
+
+program
+  .command("init-memory")
+  .description(
+    "Scaffold markdown project brain (memory/) in the target repo checkout",
+  )
+  .option(
+    "-p, --path <dir>",
+    "Target repo root (defaults to project.localPath or cwd)",
+  )
+  .action(async (opts: { path?: string }) => {
+    await cmdInitMemory({ path: opts.path });
   });
 
 program.parseAsync(process.argv).catch((err: unknown) => {

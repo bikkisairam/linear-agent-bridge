@@ -16,7 +16,10 @@ export function buildBootstrapPrompt(input: {
 }): string {
   const { config, issue, priorRuns, priorPr, cwd = process.cwd() } = input;
   const skills = resolveSkillContents(config, cwd);
-  const brainExcerpts = loadProjectBrainExcerpts(config, issue.identifier);
+  const brainExcerpts = loadProjectBrainExcerpts(config, issue.identifier, [
+    issue.title,
+    issue.description ?? "",
+  ]);
 
   const priorMemoryLines: string[] = [];
   if (priorRuns.length > 0) {

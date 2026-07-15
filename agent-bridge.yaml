@@ -1,11 +1,14 @@
 project:
   name: "Hello Agent Demo"
+  # Point at your demo GitHub repo (the agent codes here — not in linear-agent-bridge)
   repo: "https://github.com/<your-user>/hello-agent-demo"
   defaultBranch: main
-  # Optional local checkout of the target repo (for injecting project-brain excerpts)
+  # Local checkout of that demo repo (required for lab init-memory + local brain excerpts)
   # localPath: "../hello-agent-demo"
   memoryDir: memory
 
+# Linear test project: Agent Bridge Memory POC
+# https://linear.app/national-datacare/project/agent-bridge-memory-poc-556fcc17f4cc
 linear:
   triggerLabel: "agent-approved"
 
