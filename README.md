@@ -4,6 +4,11 @@ Personal POC: **approved Linear issue → Cursor cloud agent → PR**, plus a **
 
 Linear project: [Agent Bridge Memory POC](https://linear.app/national-datacare/project/agent-bridge-memory-poc-556fcc17f4cc) · Issue [ENG-123](https://linear.app/national-datacare/issue/ENG-123/build-linear-agent-bridge-mvp-cli-lab-takestatuswatch)
 
+**GitHub (personal, not NDC org):**
+- Bridge: https://github.com/bikkisairam/linear-agent-bridge
+- Demo target: https://github.com/bikkisairam/hello-agent-demo
+- PR: https://github.com/bikkisairam/linear-agent-bridge/pull/1
+
 > Official Linear ↔ Cursor (`@Cursor`) already does issue → agent → PR.  
 > **This bridge adds:** approval gate, your prompts/skills, SQLite run ledger, and **markdown memory** in the target repo.
 
