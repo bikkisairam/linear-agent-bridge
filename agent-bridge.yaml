@@ -1,14 +1,13 @@
 project:
   name: "Hello Agent Demo"
-  # Point at your demo GitHub repo (the agent codes here — not in linear-agent-bridge)
-  repo: "https://github.com/<your-user>/hello-agent-demo"
+  # Personal GitHub (bikkisairam) — not NDC org
+  repo: "https://github.com/bikkisairam/hello-agent-demo"
   defaultBranch: main
-  # Local checkout of that demo repo (required for lab init-memory + local brain excerpts)
-  # localPath: "../hello-agent-demo"
+  localPath: "../hello-agent-demo"
   memoryDir: memory
 
-# Linear test project: Agent Bridge Memory POC
-# https://linear.app/national-datacare/project/agent-bridge-memory-poc-556fcc17f4cc
+# Optional Linear tracking (workspace may still be NDC if that's where your Linear lives).
+# Code + PRs always go to personal GitHub repos above.
 linear:
   triggerLabel: "agent-approved"
 
