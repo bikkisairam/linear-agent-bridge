@@ -18,6 +18,15 @@ export type CliContext = {
   linear: LinearBridge;
 };
 
+export type TakeResult =
+  | { ok: true; identifier: string; prUrl?: string; status: string }
+  | {
+      ok: false;
+      identifier?: string;
+      reason: "not_approved" | "active_run" | "failed" | "error";
+      message: string;
+    };
+
 export function openContext(cwd = process.cwd()): CliContext {
   const config = loadConfig(cwd);
   const env = loadEnv(cwd);
@@ -27,24 +36,71 @@ export function openContext(cwd = process.cwd()): CliContext {
 }
 
 export async function cmdTake(issueId: string, cwd = process.cwd()): Promise<void> {
-  const ctx = openContext(cwd);
-  const identifier = issueId.toUpperCase();
+  const result = await takeIssue(issueId, {
+    cwd,
+    source: "lab take",
+    closeLedger: true,
+  });
+  if (!result.ok) {
+    console.error(result.message);
+    process.exitCode = result.reason === "failed" ? 2 : 1;
+  }
+}
+
+/**
+ * Core take flow. Used by CLI, webhook serve, and poll.
+ */
+export async function takeIssue(
+  issueRef: string,
+  options: {
+    cwd?: string;
+    source?: string;
+    /** Existing context — if provided, ledger is NOT closed. */
+    ctx?: CliContext;
+    closeLedger?: boolean;
+  } = {},
+): Promise<TakeResult> {
+  const cwd = options.cwd ?? process.cwd();
+  const source = options.source ?? "lab take";
+  const ownsCtx = !options.ctx;
+  const ctx = options.ctx ?? openContext(cwd);
+  const closeLedger = options.closeLedger ?? ownsCtx;
 
   try {
-    const issue = await ctx.linear.getIssueByIdentifier(identifier);
-    ctx.linear.assertApproved(issue, ctx.config.linear.triggerLabel);
+    const issue = looksLikeUuid(issueRef)
+      ? await ctx.linear.getIssueById(issueRef)
+      : await ctx.linear.getIssueByIdentifier(issueRef.toUpperCase());
+
+    try {
+      ctx.linear.assertApproved(issue, ctx.config.linear.triggerLabel);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      await ctx.linear.comment(
+        issue.id,
+        [
+          `Refusing: missing \`${ctx.config.linear.triggerLabel}\` label.`,
+          `Add the label, then comment \`@lab\` (or run \`lab take ${issue.identifier}\`).`,
+          `_via \`${source}\`_`,
+        ].join("\n"),
+      );
+      return { ok: false, identifier: issue.identifier, reason: "not_approved", message };
+    }
 
     const active = ctx.ledger.getActiveRun(issue.identifier);
     if (active) {
-      console.error(
+      const message = [
         `Refusing: active run already in progress for ${issue.identifier}.`,
+        `- run id: ${active.id}`,
+        `- status: ${active.status}`,
+        `- agent: ${active.cursor_agent_id ?? "n/a"}`,
+        `Run: lab status ${issue.identifier}`,
+      ].join("\n");
+      await ctx.linear.comment(
+        issue.id,
+        `${message}\n\n_via \`${source}\`_`,
       );
-      console.error(`  run id: ${active.id}`);
-      console.error(`  status: ${active.status}`);
-      console.error(`  agent:  ${active.cursor_agent_id ?? "n/a"}`);
-      console.error(`Run: lab status ${issue.identifier}`);
-      process.exitCode = 1;
-      return;
+      console.error(message);
+      return { ok: false, identifier: issue.identifier, reason: "active_run", message };
     }
 
     ctx.ledger.upsertIssue({
@@ -73,6 +129,7 @@ export async function cmdTake(issueId: string, cwd = process.cwd()): Promise<voi
 
     console.log(`Starting agent for ${issue.identifier}: ${issue.title}`);
     console.log(`Repo: ${ctx.config.project.repo}`);
+    console.log(`Source: ${source}`);
 
     try {
       const finish = await runCloudAgent({
@@ -88,7 +145,7 @@ export async function cmdTake(issueId: string, cwd = process.cwd()): Promise<voi
           await ctx.linear.comment(
             issue.id,
             [
-              `🤖 **Agent started** via \`lab take\``,
+              `🤖 **Agent started** via \`${source}\``,
               `- Cursor agent: \`${agentId}\``,
               `- Run: \`${runId}\``,
               `- Model: \`${ctx.config.cursor.model}\``,
@@ -111,6 +168,7 @@ export async function cmdTake(issueId: string, cwd = process.cwd()): Promise<voi
             `🔗 **PR opened**`,
             `- ${finish.prUrl}`,
             finish.branchName ? `- Branch: \`${finish.branchName}\`` : null,
+            `_via \`${source}\`_`,
           ]
             .filter(Boolean)
             .join("\n"),
@@ -125,12 +183,17 @@ export async function cmdTake(issueId: string, cwd = process.cwd()): Promise<voi
             `❌ **Agent run failed**`,
             finish.error ? `- ${finish.error}` : `- status: ${finish.status}`,
             finish.prUrl ? `- PR (if any): ${finish.prUrl}` : null,
+            `_via \`${source}\`_`,
           ]
             .filter(Boolean)
             .join("\n"),
         );
-        process.exitCode = 2;
-        return;
+        return {
+          ok: false,
+          identifier: issue.identifier,
+          reason: "failed",
+          message: finish.error ?? finish.status,
+        };
       }
 
       ctx.ledger.finishRun(runRow.id, "succeeded");
@@ -139,29 +202,48 @@ export async function cmdTake(issueId: string, cwd = process.cwd()): Promise<voi
         [
           `✅ **Agent run finished**`,
           `- status: \`${finish.status}\``,
-          finish.prUrl ? `- PR: ${finish.prUrl}` : `- No PR URL returned (check Cursor dashboard)`,
+          finish.prUrl
+            ? `- PR: ${finish.prUrl}`
+            : `- No PR URL returned (check Cursor dashboard)`,
           ``,
           `_Please review the PR. Do not auto-merge._`,
+          `_via \`${source}\`_`,
         ].join("\n"),
       );
 
       console.log(`Done. Status: ${finish.status}`);
       if (finish.prUrl) console.log(`PR: ${finish.prUrl}`);
       console.log(`Ledger: ${path.relative(ctx.cwd, defaultDbPath(ctx.cwd))}`);
+
+      return {
+        ok: true,
+        identifier: issue.identifier,
+        prUrl: finish.prUrl,
+        status: finish.status,
+      };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       ctx.ledger.finishRun(runRow.id, "failed", message);
       try {
         await ctx.linear.comment(
           issue.id,
-          `❌ **Agent run failed to complete**\n- ${message}`,
+          `❌ **Agent run failed to complete**\n- ${message}\n_via \`${source}\`_`,
         );
       } catch {
-        // ignore comment failures on hard errors
+        // ignore
       }
-      throw err;
+      return { ok: false, identifier: issue.identifier, reason: "error", message };
     }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, reason: "error", message };
   } finally {
-    ctx.ledger.close();
+    if (closeLedger) ctx.ledger.close();
   }
+}
+
+function looksLikeUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
 }

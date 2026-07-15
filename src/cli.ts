@@ -4,13 +4,15 @@ import { cmdTake } from "./commands/take.js";
 import { cmdStatus } from "./commands/status.js";
 import { cmdWatch } from "./commands/watch.js";
 import { cmdInitMemory } from "./commands/init-memory.js";
+import { cmdServe } from "./commands/serve.js";
+import { cmdPoll } from "./commands/poll.js";
 
 const program = new Command();
 
 program
   .name("lab")
   .description(
-    "Linear Agent Bridge — approved issues → Cursor agents → PRs + markdown project brain",
+    "Linear Agent Bridge — @lab/@cursor comments → Cursor agents → PRs + markdown brain",
   )
   .version("0.1.0");
 
@@ -49,6 +51,27 @@ program
   )
   .action(async (opts: { path?: string }) => {
     await cmdInitMemory({ path: opts.path });
+  });
+
+program
+  .command("serve")
+  .description(
+    "Listen for Linear Comment webhooks; @lab / @cursor starts lab take",
+  )
+  .option("-p, --port <number>", "HTTP port", (v) => Number(v))
+  .action(async (opts: { port?: number }) => {
+    await cmdServe({ port: opts.port });
+  });
+
+program
+  .command("poll")
+  .description(
+    "Local mode: poll approved issues for @lab / @cursor (no public URL)",
+  )
+  .option("-t, --team <key>", "Linear team key (default ENG)")
+  .option("--once", "Single poll pass then exit")
+  .action(async (opts: { team?: string; once?: boolean }) => {
+    await cmdPoll({ team: opts.team, once: opts.once });
   });
 
 program.parseAsync(process.argv).catch((err: unknown) => {

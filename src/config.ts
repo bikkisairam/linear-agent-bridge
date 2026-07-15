@@ -13,6 +13,13 @@ export type AgentBridgeConfig = {
   };
   linear: {
     triggerLabel: string;
+    /** Comment phrases that start an agent (like @Cursor). Default: @lab, @cursor */
+    commentTriggers?: string[];
+    webhook?: {
+      port?: number;
+      path?: string;
+    };
+    pollSeconds?: number;
   };
   cursor: {
     runtime: "cloud" | "local";
@@ -28,6 +35,7 @@ export type AgentBridgeConfig = {
 export type EnvKeys = {
   cursorApiKey: string;
   linearApiKey: string;
+  linearWebhookSecret?: string;
 };
 
 export function loadEnv(cwd = process.cwd()): EnvKeys {
@@ -43,7 +51,11 @@ export function loadEnv(cwd = process.cwd()): EnvKeys {
     throw new Error("Missing LINEAR_API_KEY in environment or .env");
   }
 
-  return { cursorApiKey, linearApiKey };
+  return {
+    cursorApiKey,
+    linearApiKey,
+    linearWebhookSecret: process.env.LINEAR_WEBHOOK_SECRET?.trim() || undefined,
+  };
 }
 
 export function loadConfig(
@@ -65,7 +77,16 @@ export function loadConfig(
     throw new Error("agent-bridge.yaml: project.repo is required");
   }
   if (!parsed.linear?.triggerLabel) {
-    parsed.linear = { triggerLabel: "agent-approved" };
+    parsed.linear = { ...(parsed.linear ?? {}), triggerLabel: "agent-approved" };
+  }
+  if (!parsed.linear.commentTriggers?.length) {
+    parsed.linear.commentTriggers = ["@lab", "@cursor"];
+  }
+  if (!parsed.linear.webhook) {
+    parsed.linear.webhook = { port: 8787, path: "/webhooks/linear" };
+  }
+  if (parsed.linear.pollSeconds == null) {
+    parsed.linear.pollSeconds = 15;
   }
   if (!parsed.cursor) {
     parsed.cursor = {
