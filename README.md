@@ -53,6 +53,10 @@ Linear project issues
 | `lab take <ISSUE>` | Start cloud agent (requires `agent-approved`) |
 | `lab status <ISSUE>` | Ledger + brain file paths |
 | `lab watch <ISSUE>` | Follow an in-flight run |
+| `lab poll` | **From Linear:** watch for `@lab` / `@cursor` comments (local) |
+| `lab serve` | Same via Linear webhooks (needs public URL) |
+
+Comment trigger guide: [`docs/COMMENT-TRIGGER.md`](docs/COMMENT-TRIGGER.md).
 
 ## Memory model
 

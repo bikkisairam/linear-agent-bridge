@@ -10,6 +10,14 @@ project:
 # Code + PRs always go to personal GitHub repos above.
 linear:
   triggerLabel: "agent-approved"
+  # Comment like native @Cursor — these phrases start an agent
+  commentTriggers:
+    - "@lab"
+    - "@cursor"
+  webhook:
+    port: 8787
+    path: /webhooks/linear
+  pollSeconds: 15
 
 cursor:
   runtime: cloud
